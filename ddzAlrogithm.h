@@ -10,9 +10,7 @@
 
 
 namespace ddzalgorithm{
-enum class CardNum{
-    UNKNOWN=     -0x1,
-    
+enum class CardNum : std::uint8_t{
     THREE =     0x0,
     FOUR  =     0x1,
     FIVE  =     0x2,
@@ -30,7 +28,7 @@ enum class CardNum{
     TWO   =     0xc,
 };
 
-enum class CardType{
+enum class CardType : std::uint8_t{
     HEART           = 0x0,
     SPADE           = 0x1,
     CLUB            = 0x2,
@@ -51,12 +49,12 @@ struct Card{
     CardType type;
     CardNum num;
 
-    //获取相似判断编码 ，不能超过0xf
+    //get card only card code(normal use num as code,laizi joker use specifical code)
     int getRecordCode() const {
-        //普通牌和癞子不受type影响
-        if(static_cast<int>(type) <= static_cast<int>(CardType::LAIZI)){
-            // 癞子牌被当作非癞子牌使用
+        if(static_cast<int>(type) < static_cast<int>(CardType::LAIZI)){
             return static_cast<int>(num);
+        }else if(type == CardType::LAIZI){
+            return 0xd;
         }else if(type == CardType::SMALL_JOKER){
             return 0xe;
         }else{
@@ -65,10 +63,11 @@ struct Card{
     }
 };
 
-enum class Illegal{
+enum class Illegal : std::uint8_t{
+    //rocket
     ROCKET                      = 0xff,        
 
-    // not change bomb order
+    //bomb (include pure laizi bomb and comb bomb and not laizi bomb)
     BOMB_8_PURE_JOKER           = 0xef,        
     BOMB_8_COMB                 = 0xee,        
     BOMB_7_PURE_JOKER           = 0xed,        
@@ -81,16 +80,18 @@ enum class Illegal{
     BOMB_4_COMB                 = 0xe6,        
     BOMB_4_WITHOU_JOKER         = 0xe5,        
 
-    
+    //single
     SINGLE                      = 0x10,
 
+    //pair
     PAIR                        = 0x20,
 
+    //triple
     TRIPLE_PURE                 = 0x30,
     TRIPLE_WITH_SINGLE          = 0x31,
     TRIPLE_WITH_PAIR            = 0x31,
 
-    //not change chain order and value
+    //single chains
     CHAIN_5                     = 0x40,
     CHAIN_6                     = 0x41,
     CHAIN_7                     = 0x42,
@@ -100,7 +101,7 @@ enum class Illegal{
     CHAIN_11                    = 0x46,
     CHAIN_12                    = 0x47,          //3 ~ ACE 12cards
 
-    //ont change pair chains order and value
+    //pair chains
     PAIR_CHAIN_3                = 0x50,
     PAIR_CHAIN_4                = 0x51,
     PAIR_CHAIN_5                = 0x52,
@@ -110,10 +111,11 @@ enum class Illegal{
     PAIR_CHAIN_9                = 0x56,     
     PAIR_CHAIN_10               = 0x57,     // 20 cards
 
+    //four
     FOUR_WITH_TWO_SINGLES        = 0x60,    //6
     FOUR_WITH_TWO_PAIRS          = 0x60,    //8
 
-    //飞机的三条部分不能带2
+    //airplane
     AIRPLANE_2_NOT_SWINGS        = 0x70,    //6
     AIRPLANE_3_NOT_SWINGS        = 0x71,
     AIRPLANE_4_NOT_SWINGS        = 0x72,
@@ -129,13 +131,13 @@ enum class Illegal{
     AIRPLANE_3_WITH_BIG_SWINGS       = 0x7a, // 15 cards
     AIRPLANE_4_WITH_BIG_SWINGS       = 0x7b, // 20 cards
 
-    //航天飞机
-    SPACE_SHUTTLE_2_NOT_SWINGS                   = 0x80,//3333 4444
-    SPACE_SHUTTLE_3_NOT_SWINGS                   = 0x81,//
-    SPACE_SHUTTLE_4_NOT_SWINGS                   = 0x82,//16 cards
+    //space shuttle
+    SPACE_SHUTTLE_2_NOT_SWINGS       = 0x80,//3333 4444
+    SPACE_SHUTTLE_3_NOT_SWINGS       = 0x81,//
+    SPACE_SHUTTLE_4_NOT_SWINGS       = 0x82,//16 cards
 
-    SPACE_SHUTTLE_2_WITH_SWINGS                   = 0x83,//3333 4444 5678
-    SPACE_SHUTTLE_3_WITH_SWINGS                   = 0x84,//16 cards
+    SPACE_SHUTTLE_2_WITH_SWINGS      = 0x83,//3333 4444 5678
+    SPACE_SHUTTLE_3_WITH_SWINGS      = 0x84,//16 cards
 };
 
 struct Token{
@@ -153,22 +155,6 @@ struct Token{
  *      "*" represent laizi 
  * @input  
  *      input cards
- * @reduceSameBomb  
- *      eg: 22 8(*)888 can be combinated 2288 or 2888,
- *      if true, only has one item that is 2288(use min laizi)
- *      elsewise,2288 or 2888 all can be added to result
- * @reduceSamePair
- *      eg: 2 8(*) 9(*) can be combinated 28 or 29
- *      if true, only has one item
- *      elsewise,28 or 29 all can be added to result
- * @reduceSameThreeWithOne
- *      eg: 22 8(*)88 9(*)99 can be combinated 2288 or 2289
- *      if true, oney has one item
- *      elsewise,2288 2289 all can be added to result
- * @reduceSameThreeWithPair
- *      eg: 22 8(*)88 9(*)99 can be combinated 228 88 or 228 99
- *      if true,only has one item
- *      elsewise, 228 88 or 228 99 all can be added to result
  * @maxAirPlane
  *      max airplane three part value(defualt enable)
  *      任何情況下，其三條部分都不能有2 from wikipedia ,i dont know
@@ -177,10 +163,6 @@ struct Token{
  *      
  */
 std::vector<Token> getToken(std::vector<uint8_t> input,
-    bool reduceSameBomb = false,
-    bool reduceSamePair = false,
-    bool reduceSameThreeWithOne = false,
-    bool reduceSameThreeWithPair = false,
     int maxAirplane = 12,
     bool supportShuttle = false
     )
@@ -230,10 +212,11 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
         const CardNum cardNum = laiziCards[0]->num;
         firstLaiziCards[firstLaiziCardsNum++] = laiziCards[0];
         for(int i = 1; i < laiziCardsNum; i++){
-            if(cardNum == laiziCards[i]->num){
-                firstLaiziCards[firstLaiziCardsNum++] = laiziCards[i];
+            const auto& card = laiziCards[i];
+            if(cardNum == card->num){
+                firstLaiziCards[firstLaiziCardsNum++] = card;
             }else{
-                secondLaiziCards[secondLaiziCardsNum++] = laiziCards[i];
+                secondLaiziCards[secondLaiziCardsNum++] = card;
             }
         }
     }
@@ -244,7 +227,7 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
         result.emplace_back(Illegal::ROCKET,rocket);
     }
 
-    //bomb max 13 * 5 * 4 == 260 loop
+    //bomb max 13 * 5  ==  65 loop
     if(maxNormalCardsNum + laiziCardsNum >= 4){
         int illegal = static_cast<int>(Illegal::BOMB_4_WITHOU_JOKER);
         for(int i = 4; i <= 8; i++){
@@ -276,26 +259,17 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
                     result.emplace_back(static_cast<Illegal>(illegal + 1),bomb);
                 }
             };
-            if(i <= maxNormalCardsNum + laiziCardsNum){
+            if(maxNormalCardsNum + laiziCardsNum >= i){
                 for(int j = 0; j < 13; j++){
                     auto normalNum = normalCardsNum[j];
                     if(normalNum > 0 && normalNum + laiziCardsNum >= i){
                         findBomb = true;
                         auto normal = normalCards[j];
-                        if(reduceSameBomb){
-                            //4软炸这里不会生成，只会生成无癞子炸弹，需要手动补上，因为4软炸比4无癞子炸弹大
-                            if(normalNum == 4 && i == 4 && laiziCardsNum >= 1){
-                                calcBomb(3,normal);
-                            }
-                            calcBomb(normalNum,normal);
-                        }else{
-                            // 22 8(*)888 can be combinated with 2288 or 2888 
-                            for(int useNormalNum = 1; useNormalNum <= normalNum; useNormalNum++){
-                                if(useNormalNum + laiziCardsNum >= i){
-                                    calcBomb(useNormalNum,normal);
-                                }
-                            }
+                        //4软炸这里不会生成，只会生成无癞子炸弹，需要手动补上，因为4软炸比4无癞子炸弹大
+                        if(normalNum == 4 && i == 4 && laiziCardsNum >= 1){
+                            calcBomb(3,normal);
                         }
+                        calcBomb(normalNum,normal);
                     }
                 }
             }
@@ -306,7 +280,7 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
         }
     }
 
-    //single 
+    //single max 13 + 2 = 15 loop
     if (totalCardNum >= 1){
         std::vector<uint8_t> tempSingles;
         for(int i = 0; i < 13; i++){
@@ -334,38 +308,20 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
         }
     }
 
-    //pair
+    //pair max 13 loop
     if(maxNormalCardsNum + laiziCardsNum >= 2){
         for(int i = 0; i < 13; i++){
             int num = normalCardsNum[i];
             if(num > 0 && num + laiziCardsNum >= 2){
                 const auto& one = normalCards[i];
+                std::vector<uint8_t> pair(2);
+                pair.emplace_back(one[0]->origin);
                 if(num == 1){
-                    if(reduceSamePair){
-                        std::vector<uint8_t> pair;
-                        pair.emplace_back(one[0]->origin);
-                        pair.emplace_back(laiziCards[0]->origin);
-                        result.emplace_back(Illegal::PAIR,pair);
-                    }else{
-                        if(firstLaiziCardsNum > 0){
-                            std::vector<uint8_t> pair;
-                            pair.emplace_back(one[0]->origin);
-                            pair.emplace_back(firstLaiziCards[0]->origin);
-                            result.emplace_back(Illegal::PAIR,pair);
-                        }
-                        if(secondLaiziCardsNum > 0){
-                            std::vector<uint8_t> pair;
-                            pair.emplace_back(one[0]->origin);
-                            pair.emplace_back(secondLaiziCards[0]->origin);
-                            result.emplace_back(Illegal::PAIR,pair);
-                        }
-                    }
+                    pair.emplace_back(laiziCards[0]->origin);
                 }else{
-                    std::vector<uint8_t> pair;
-                    pair.emplace_back(one[0]->origin);
                     pair.emplace_back(one[1]->origin);
-                    result.emplace_back(Illegal::PAIR,pair);
                 }
+                result.emplace_back(Illegal::PAIR,pair);
             }
         }
         if(firstLaiziCardsNum >= 2){
@@ -376,17 +332,16 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
             std::vector<uint8_t> pair{secondLaiziCards[0]->origin,secondLaiziCards[1]->origin};
             result.emplace_back(Illegal::PAIR,pair);
         }
-        //rocket is not pair
     }
 
-    //triple 
+    //triple max 13 * (12 + 12) = 312 loop
     if(maxNormalCardsNum + laiziCardsNum >= 3){
-        //1. normal as triple(exclude laizi as triple)
+        //1. normal as triple(exclude pure laizi as triple)
         for(int i = 0; i < 13; i++){
             int num = normalCardsNum[i];
             if(num > 0 && num + laiziCardsNum >= 3){
                 const auto& one = normalCards[i];
-                std::vector<uint8_t> triple;
+                std::vector<uint8_t> triple(3);
                 int useLaiziNum = 0;
                 if(num == 1){
                     triple.emplace_back(one[0]->origin);
@@ -419,66 +374,14 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
                     if(bigJoker != nullptr){
                         tempSingles.emplace_back(bigJoker->origin);
                     }
-                    auto calcTripleSingle = [&](){
-                        for(const auto& one: tempSingles){
-                            std::vector<uint8_t> copyTriple(triple);
-                            copyTriple.emplace_back(one);
-                            result.emplace_back(Illegal::TRIPLE_WITH_SINGLE,copyTriple);
-                        }
-                    };
-                    // spec: laizi combination
-                    if(useLaiziNum == 0){
-                        //no use laizi
-                        if(reduceSameThreeWithOne){
-                            if(laiziCardsNum > 0){
-                                tempSingles.emplace_back(laiziCards[0]->origin);
-                            }
-                        }else{
-                            if(firstLaiziCardsNum > 0){
-                                tempSingles.emplace_back(firstLaiziCards[0]->origin);
-                            }
-                            if(secondLaiziCardsNum > 0){
-                                tempSingles.emplace_back(secondLaiziCards[0]->origin);
-                            }
-                        }
-                        calcTripleSingle();
-                    }else if(useLaiziNum == laiziCardsNum){
-                        //all laizi be used
-                        calcTripleSingle();
-                    }else{
-                        if(laiziCardsNum - useLaiziNum >= 1){
-                            // has no use laizi cards
-                            if(!reduceSameThreeWithOne && firstLaiziCardsNum > 0 && secondLaiziCardsNum > 0){
-                                // two types laizi, can be 
-                                auto calcTripleSingle2 = [&](int firstNum,const Card** first,int secondNum,const Card** second){
-                                    std::vector<uint8_t> copyTriple(triple);
-                                    std::vector<uint8_t> tempSingles2(tempSingles);
-                                    std::vector<uint8_t> priorityLaiZi;
-                                    for(int i = 0; i < firstNum; i++){
-                                        priorityLaiZi.emplace_back(first[i]->origin);
-                                    }
-                                    for(int i = 0; i < secondNum; i++){
-                                        priorityLaiZi.emplace_back(second[i]->origin);
-                                    }
-                                    int index = 0;
-                                    for(int i = 3 - useLaiziNum; i < 3; i++){
-                                        copyTriple[i] = priorityLaiZi[index++];
-                                    }
-                                    tempSingles2.emplace_back(second[secondNum - 1]->origin);
-                                    for(const auto& one: tempSingles2){
-                                        std::vector<uint8_t> copyTriple2(copyTriple);
-                                        copyTriple2.emplace_back(one);
-                                        result.emplace_back(Illegal::TRIPLE_WITH_SINGLE,copyTriple2);
-                                    }
-                                };
-                                calcTripleSingle2(firstLaiziCardsNum,firstLaiziCards,secondLaiziCardsNum,secondLaiziCards);
-                                calcTripleSingle2(secondLaiziCardsNum,secondLaiziCards,firstLaiziCardsNum,firstLaiziCards);
-                            }else{
-                                // not need to resort use laizi
-                                tempSingles.emplace_back(laiziCards[useLaiziNum]->origin);
-                                calcTripleSingle();
-                            }
-                        }
+                    //it's become 4 bomb
+                    // if(laiziCardsNum - useLaiziNum >= 1){
+                    //     tempSingles.emplace_back(laiziCards[useLaiziNum]);
+                    // }
+                    for(const auto& one: tempSingles){
+                        std::vector<uint8_t> copyTriple(triple);
+                        copyTriple.emplace_back(one);
+                        result.emplace_back(Illegal::TRIPLE_WITH_SINGLE,copyTriple);
                     }
                 }
 
@@ -503,47 +406,14 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
                         copyTriple.emplace_back(std::get<1>(one));
                         result.emplace_back(Illegal::TRIPLE_WITH_PAIR,copyTriple);
                     }
-                    //need resort use laizi,because laizi can be pair eg(33 444(*) 55 can be 334 44 or 334 55)
-                    if(leftLaizi >= 2){
-                        auto calcTriplePair = [&](int firstNum,const Card** first,int secondNum,const Card** second){
-                            std::vector<uint8_t> copyTriple(triple);
-                            std::vector<const Card*> priorityLaiZi;
-                            for(int i = 0; i < firstNum; i++){
-                                priorityLaiZi.emplace_back(first[i]);
-                            }
-                            for(int i = 0; i < secondNum; i++){
-                                priorityLaiZi.emplace_back(second[i]);
-                            }
-                            int index = 0;
-                            for(int i = 3 - useLaiziNum;i < 3; i--){
-                                const auto& card = priorityLaiZi[index++];
-                                copyTriple[i] = card->origin;
-                            }
-                            CardNum desireCardNum = second[0]->num;
-                            const auto& lastTwoOfCard = priorityLaiZi[laiziCardsNum - 2];
-                            const auto& lastFirstOfCard = priorityLaiZi[laiziCardsNum - 1];
-                            //最后两个一定要和期望的匹配
-                            if (desireCardNum == lastTwoOfCard->num && desireCardNum == lastFirstOfCard->num){
-                                copyTriple[4] = lastTwoOfCard->origin;
-                                copyTriple[5] = lastFirstOfCard->origin;
-                                result.emplace_back(Illegal::TRIPLE_WITH_PAIR,copyTriple);
-                            } 
-                        };
-                        if(reduceSameThreeWithPair){
-                            if(firstLaiziCardsNum >= 2){
-                                calcTriplePair(secondLaiziCardsNum,secondLaiziCards,firstLaiziCardsNum,firstLaiziCards);
-                            }else if(secondLaiziCardsNum >= 2){
-                                calcTriplePair(firstLaiziCardsNum,firstLaiziCards,secondLaiziCardsNum,secondLaiziCards);
-                            }
-                        }else{
-                            if(firstLaiziCardsNum >= 2){
-                                calcTriplePair(secondLaiziCardsNum,secondLaiziCards,firstLaiziCardsNum,firstLaiziCards);
-                            }
-                            if(secondLaiziCardsNum >= 2){
-                                calcTriplePair(firstLaiziCardsNum,firstLaiziCards,secondLaiziCardsNum,secondLaiziCards);
-                            }
-                        }
-                    }
+                    //it's become 5 comb bomb
+                    // if(leftLaizi >= 2){
+                    //     if(firstLaiziCardsNum >= 2){
+                    //         calcTriplePair(secondLaiziCardsNum,secondLaiziCards,firstLaiziCardsNum,firstLaiziCards);
+                    //     }else if(secondLaiziCardsNum >= 2){
+                    //         calcTriplePair(firstLaiziCardsNum,firstLaiziCards,secondLaiziCardsNum,secondLaiziCards);
+                    //     }
+                    // }
                 }                
             }
         }
@@ -556,14 +426,7 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
                 result.emplace_back(Illegal::TRIPLE_PURE,triple);
                 if(totalCardNum >= 4){
                     std::vector<uint8_t> tempSingles;
-                    for(int i = 0; i < 13; i++){
-                        if(normalCardsNum[i] > 0){
-                            tempSingles.emplace_back(normalCards[i][0]->origin);
-                        }
-                    }
-                    if(canUserLaiziNum > 0){
-                        tempSingles.emplace_back(second[0]->origin);
-                    }
+                    // it's become 4 comb bomb
                     if(smallJoker != nullptr){
                         tempSingles.emplace_back(smallJoker->origin);
                     }
@@ -576,45 +439,11 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
                         result.emplace_back(Illegal::TRIPLE_WITH_SINGLE,copyTriple);
                     }
                 }
-                int leftLaiziNum = laiziCardsNum - 3;
-                const Card* priorityLaiZi[5] = {nullptr};
-                int priorityLaiZiNum = 0;
-                for(int i = 3; i < firstNum; i++){
-                    priorityLaiZi[priorityLaiZiNum++] = first[i]; 
-                }
-                for(int i = 0; i < secondNum; i++){
-                    priorityLaiZi[priorityLaiZiNum++] = second[i]; 
-                }
-                if(totalCardNum >= 5){
-                    std::vector<std::tuple<uint8_t,uint8_t>> tempPairs;
-                    for(int i = 0; i <13; i++){
-                        int num = normalCardsNum[i]; 
-                        if(num > 0 && num + leftLaiziNum >= 2){
-                            const auto& normal = normalCards[i];
-                            if(num == 1){
-                                //only use first laizi, not need to resort left laizi combination
-                                tempPairs.emplace_back(normal[0]->origin,priorityLaiZi[0]->origin);
-                            }else{
-                                tempPairs.emplace_back(normal[0]->origin,normal[1]->origin);
-                            }
-                        }
-                    }
-                    //2(*)222 8(*)88 can be combinated 222 88
-                    if(secondNum >= 2){
-                        tempPairs.emplace_back(second[0]->origin,second[1]->origin);
-                    }
-                    for(const auto& one : tempPairs){
-                        std::vector<uint8_t> copyTriple(triple);
-                        copyTriple.emplace_back(std::get<0>(one));
-                        copyTriple.emplace_back(std::get<1>(one));
-                        result.emplace_back(Illegal::TRIPLE_WITH_PAIR,copyTriple);
-                    }
-                }
+                // it's become 5 comb bomb or pure laizi bomb
             };
             if(firstLaiziCardsNum >= 3){
                 calcLaiziTriple(firstLaiziCardsNum,firstLaiziCards,secondLaiziCardsNum,secondLaiziCards);
-            }
-            if(secondLaiziCardsNum >= 3){
+            }else if(secondLaiziCardsNum >= 3){
                 calcLaiziTriple(secondLaiziCardsNum,secondLaiziCards,firstLaiziCardsNum,firstLaiziCards);
             }
         }
@@ -667,7 +496,6 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
             for(int j = 0; j < 13 - i; j++){ //0 ~ 8 0 ~ 3
                 std::vector<uint8_t> chains(needCardNum);
                 std::vector<int> emptyParts;
-
                 for(int k = j; k < i + j; k++){
                     const auto& one = normalCards[k];
                     int oneNum = normalCardsNum[k];
@@ -699,6 +527,7 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
         }
     }
 
+    //max 13 * 13 * 6 == 1014 loop
     if(totalCardNum >= 6 && maxNormalCardsNum + laiziCardsNum >= 4){
         // four with two singles
         for(int i = 0; i < 13; i++){
@@ -706,169 +535,123 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
             if(num > 0 && num + laiziCardsNum >= 4){
                 const auto& one = normalCards[i];
                 std::vector<uint8_t> four;
-                int useLaiziNum = 0;
-                for(int j = 0; j < num; j++){
-                    four.emplace_back(one[j]->origin);
-                }
-                for(int j = num; j < 4; j++){
-                    four.emplace_back(laiziCards[useLaiziNum++]->origin);
-                }
-                //with two singles
-                std::vector<const Card*> tempSingles;
-                for(int j = 0; j < 13; j++){
-                    int num2 = normalCardsNum[j];
-                    if(j != i && num2 > 0){
-                        const auto& one2 = normalCards[j];
-                        //max record two
-                        if(num2 > 1){
-                            tempSingles.emplace_back(one2[0]);
-                            tempSingles.emplace_back(one2[1]);
-                        }else{
-                            tempSingles.emplace_back(one2[0]);
-                        }
-                    }
-                }
-                if(laiziCardsNum - useLaiziNum > 0){
-                    if(laiziCardsNum - useLaiziNum == 1){
-                        tempSingles.emplace_back(laiziCards[useLaiziNum]);
-                    }else{
-                        tempSingles.emplace_back(laiziCards[useLaiziNum]);
-                        tempSingles.emplace_back(laiziCards[useLaiziNum + 1]);
-                    }
-                }
-                if(smallJoker != nullptr){
-                    tempSingles.emplace_back(smallJoker);
-                }
-                if(bigJoker != nullptr){
-                    tempSingles.emplace_back(bigJoker);
-                }
-                //唯一编码，去除重复
-                unsigned char record[16 * 16 + 16] = {'\0'};
-                auto p2Size = tempSingles.size();
-                if(p2Size >= 2){
-                    //移除相似的部分,冒泡算法遍历组合
-                    for(int i = 0; i < p2Size; i++){
-                        for(int j = i + 1; j < p2Size; j++){
-                            const Card* first = tempSingles[i];
-                            const Card* second = tempSingles[j];
-                            int firstKey = first->getRecordCode();
-                            int secondKey = second->getRecordCode();
-                            int key1 = firstKey * 16 + secondKey;
-                            int key2 = secondKey * 16 + firstKey;
-                            if(record[key1] == '\0' && record[key2] == '\0'){
-                                record[key1] = '\1';
-                                record[key2] = '\1';
-                                std::vector<uint8_t> copyFour(four);
-                                copyFour.emplace_back(first->origin);
-                                copyFour.emplace_back(second->origin);
-                                result.emplace_back(Illegal::FOUR_WITH_TWO_SINGLES,copyFour);
-                            }
-                        }
-                    }
-                }
-
-                //four with two pairs
-            }
-        }
-    }
-
-    //four with two pairs
-    if(totalCardNum >= 8 && maxNormalCardsNum + laiziCardsNum >= 4){
-        const Card* priorityLaizi[8];
-        int tempLaiziNum = 0;
-        for(int i = 0; i < firstLaiziCardsNum; i++){
-            priorityLaizi[tempLaiziNum++] = firstLaiziCards[i];
-        }
-        for(int i = 0; i < secondLaiziCardsNum; i++){
-            priorityLaizi[tempLaiziNum++] = secondLaiziCards[i];
-        }
-        for(int i = 0; i < 13; i++){
-            int num = normalCardsNum[i];
-            if(num > 0 && num + laiziCardsNum >= 4){
-                const auto& one = normalCards[i];
-                std::vector<uint8_t> four;
-                const Card* first[2];
-                const Card* second[2];
                 int fourUseLaizi = 0;
                 for(int j = 0; j < num; j++){
                     four.emplace_back(one[j]->origin);
                 }
                 for(int j = num; j < 4; j++){
-                    four.emplace_back(priorityLaizi[fourUseLaizi++]->origin);
+                    four.emplace_back(laiziCards[fourUseLaizi++]->origin);
                 }
-
-                //find first pair
-                int leftLaiziNum = laiziCardsNum - fourUseLaizi;
-                for(int j = 0; j < 13; j++){
-                    int firstNum = normalCardsNum[j];
-                    if(firstNum > 0 && firstNum + leftLaiziNum >= 2 && j != i){
-                        int firstUseLaizi = 0;
-                        const auto& firstCards = normalCards[j];
-                        first[0] = firstCards[0];
-                        if(firstNum == 1){
-                            first[1] = priorityLaizi[fourUseLaizi + (firstUseLaizi++)];
-                        }else{
-                            first[1] = firstCards[1];
+                
+                {
+                    //with two singles
+                    std::vector<const Card*> tempSingles;
+                    for(int j = 0; j < 13; j++){
+                        int num2 = normalCardsNum[j];
+                        if(j != i && num2 > 0){
+                            const auto& one2 = normalCards[j];
+                            tempSingles.emplace_back(one2[0]);
+                            //max record two
+                            if(num2 > 1){
+                                tempSingles.emplace_back(one2[1]);
+                            }
                         }
-                        for(int k = j + 1; k < 13; k++){
-                            int secondNum = normalCardsNum[k];
-                            if(secondNum > 0 && secondNum + (leftLaiziNum - firstUseLaizi) >= 2 && k != i){
-                                const auto& secondCards = normalCards[k];
-                                second[0] = secondCards[0];
-                                if(secondNum == 1){
-                                    second[1] = priorityLaizi[fourUseLaizi + firstUseLaizi];
-                                }else{
-                                    second[1] = secondCards[1];
+                    }
+                    //max 1 laizi,otherwise become 5 soft bomb
+                    if(laiziCardsNum - fourUseLaizi > 0){
+                        tempSingles.emplace_back(laiziCards[fourUseLaizi]);
+                    }
+                    if(smallJoker != nullptr){
+                        tempSingles.emplace_back(smallJoker);
+                    }
+                    if(bigJoker != nullptr){
+                        tempSingles.emplace_back(bigJoker);
+                    }
+                    //unique code map,reduce same result
+                    unsigned char record[16 * 16] = {'\0'};
+                    //remove rocket situation
+                    record[15 * 15 + 15] = '\1';
+                    auto p2Size = tempSingles.size();
+                    if(p2Size >= 2){
+                        for(int i = 0; i < p2Size; i++){
+                            for(int j = i + 1; j < p2Size; j++){
+                                const Card* first = tempSingles[i];
+                                const Card* second = tempSingles[j];
+                                int firstKey = first->getRecordCode();
+                                int secondKey = second->getRecordCode();
+                                int key1 = firstKey * 16 + secondKey;
+                                int key2 = secondKey * 16 + firstKey;
+                                if(record[key1] == '\0' && record[key2] == '\0'){
+                                    record[key1] = '\1';
+                                    record[key2] = '\1';
+                                    std::vector<uint8_t> copyFour(four);
+                                    copyFour.emplace_back(first->origin);
+                                    copyFour.emplace_back(second->origin);
+                                    result.emplace_back(Illegal::FOUR_WITH_TWO_SINGLES,copyFour);
+                                }
+                            }
+                        }
+                    }
+                }
+                if(totalCardNum >= 8){
+                    //find first pair
+                    const Card* first[2];
+                    const Card* second[2];
+                    int leftLaiziNum = laiziCardsNum - fourUseLaizi;
+                    for(int j = 0; j < 13; j++){
+                        int firstNum = normalCardsNum[j];
+                        if(firstNum > 0 && firstNum + leftLaiziNum >= 2 && j != i){
+                            int firstUseLaizi = 0;
+                            const auto& firstCards = normalCards[j];
+                            first[0] = firstCards[0];
+                            if(firstNum == 1){
+                                first[1] = laiziCards[fourUseLaizi + (firstUseLaizi++)];
+                            }else{
+                                first[1] = firstCards[1];
+                            }
+                            for(int k = j + 1; k < 13; k++){
+                                int secondNum = normalCardsNum[k];
+                                if(secondNum > 0 && secondNum + (leftLaiziNum - firstUseLaizi) >= 2 && k != i){
+                                    const auto& secondCards = normalCards[k];
+                                    second[0] = secondCards[0];
+                                    if(secondNum == 1){
+                                        second[1] = laiziCards[fourUseLaizi + firstUseLaizi];
+                                    }else{
+                                        second[1] = secondCards[1];
+                                    }
+                                    std::vector<uint8_t> copyFour(four);
+                                    copyFour.emplace_back(first[0]);
+                                    copyFour.emplace_back(first[1]);
+                                    copyFour.emplace_back(second[0]);
+                                    copyFour.emplace_back(second[1]);
+                                    result.emplace_back(Illegal::FOUR_WITH_TWO_PAIRS,copyFour);
+                                }
+                            }
+                            // spec: twoPairs(second is same with first)
+                            // 28(*)88 or 2228 all include
+                            if(firstNum + leftLaiziNum >= 4){
+                                const Card* twoPairs[4];
+                                twoPairs[0] = firstCards[0]; 
+                                int k = 1;
+                                for(k = 1; k < firstNum;k++){
+                                    twoPairs[k] = firstCards[k];
+                                }
+                                int pairUseLaiziNum = 0;
+                                for(;k < 4; k++){
+                                    twoPairs[k] = laiziCards[fourUseLaizi + pairUseLaiziNum];
+                                    ++pairUseLaiziNum;
                                 }
                                 std::vector<uint8_t> copyFour(four);
-                                copyFour.emplace_back(first[0]);
-                                copyFour.emplace_back(first[1]);
-                                copyFour.emplace_back(second[0]);
-                                copyFour.emplace_back(second[1]);
+                                for(k = 0; k < 4; k++){
+                                    copyFour.emplace_back(twoPairs[k]);
+                                }
                                 result.emplace_back(Illegal::FOUR_WITH_TWO_PAIRS,copyFour);
                             }
                         }
-                        if(firstLaiziCardsNum - fourUseLaizi - firstUseLaizi >= 2){
-                            std::vector<uint8_t> copyFour(four);
-                            copyFour.emplace_back(first[0]);
-                            copyFour.emplace_back(first[1]);
-                            copyFour.emplace_back(firstLaiziCards[firstLaiziCardsNum - 1]);
-                            copyFour.emplace_back(firstLaiziCards[firstLaiziCardsNum - 2]);
-                            result.emplace_back(Illegal::FOUR_WITH_TWO_PAIRS,copyFour);
-                        } 
-                        if(laiziCardsNum - fourUseLaizi - firstUseLaizi >= 2 && secondLaiziCardsNum >= 2){
-                            std::vector<uint8_t> copyFour(four);
-                            copyFour.emplace_back(first[0]);
-                            copyFour.emplace_back(first[1]);
-                            copyFour.emplace_back(secondLaiziCards[secondLaiziCardsNum - 1]);
-                            copyFour.emplace_back(secondLaiziCards[secondLaiziCardsNum - 2]);
-                            result.emplace_back(Illegal::FOUR_WITH_TWO_PAIRS,copyFour);
-                        } 
                     }
-                }
-                if(firstLaiziCardsNum >= 2 && secondLaiziCardsNum >= 2){
-                    if(fourUseLaizi == 0 && firstLaiziCardsNum == 4){
-                        std::vector<uint8_t> copyFour(four);
-                        copyFour.emplace_back(firstLaiziCards[0]);
-                        copyFour.emplace_back(firstLaiziCards[1]);
-                        copyFour.emplace_back(firstLaiziCards[2]);
-                        copyFour.emplace_back(firstLaiziCards[3]);
-                        result.emplace_back(Illegal::FOUR_WITH_TWO_PAIRS,copyFour);
-                    }else if(fourUseLaizi <= firstLaiziCardsNum && secondLaiziCardsNum == 4){
-                        std::vector<uint8_t> copyFour(four);
-                        copyFour.emplace_back(secondLaiziCards[0]);
-                        copyFour.emplace_back(secondLaiziCards[1]);
-                        copyFour.emplace_back(secondLaiziCards[2]);
-                        copyFour.emplace_back(secondLaiziCards[3]);
-                        result.emplace_back(Illegal::FOUR_WITH_TWO_PAIRS,copyFour);
-                    }else if(firstLaiziCardsNum - fourUseLaizi >= 2 && secondLaiziCardsNum >= 2){
-                        std::vector<uint8_t> copyFour(four);
-                        copyFour.emplace_back(firstLaiziCards[firstLaiziCardsNum - 2]);
-                        copyFour.emplace_back(firstLaiziCards[firstLaiziCardsNum - 1]);
-                        copyFour.emplace_back(secondLaiziCards[0]);
-                        copyFour.emplace_back(secondLaiziCards[1]);
-                        result.emplace_back(Illegal::FOUR_WITH_TWO_PAIRS,copyFour);
-                    }
+                    //it will beecome 8 comb bomb
+                    // if(leftLaiziNum >= 4){
+                    // }
                 }
             }
         }
@@ -876,7 +659,6 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
 
     if(totalCardNum >= 6 ){
         //airplane without swings
-        //从2 到 6 连续飞机
         for(int i = 2; i < 7; i++){
             int condition = 3 * i;
             if(condition > totalCardNum){
@@ -917,11 +699,15 @@ std::vector<Token> getToken(std::vector<uint8_t> input,
                     } 
                     result.emplace_back(static_cast<Illegal>(static_cast<int>(Illegal::AIRPLANE_2_NOT_SWINGS) + i - 2),airplane);
 
-                    if(totalCardNum >= condition + i){
-                        
-                    }
                 }
+                //with small wings
+                if(findAirplane && totalCardNum >= condition + i){
+                    //too many choice,its exhausted
+                    //2 3 4 5
+                }
+                if(findAirplane && totalCardNum >= condition + 2 * i){
 
+                }
             }
             if(!findAirplane){
                 break;
